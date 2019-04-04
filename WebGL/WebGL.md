@@ -600,13 +600,13 @@ _注：任意形状的3D物体都可以由很多个平面三角形组合完成�
 
   与平行光原理相同，只不过同一个时刻，不同位置上接收到的光的方向向量一般是不一样的。
 
-  ![](/Users/likeke/Documents/笔记/WebGL/resources/6.jpg)
+  ![](./resources/6.jpg)
 
 - 聚光灯
 
   与平行光原理相同，但是a变成了：将聚光灯中心位置的方向向量和照射在物体上的光的方向向量点乘得到数值。另外，需要选择一个限定范围， 然后判断光线是否在限定范围内，如果不在就不照亮。
 
-  ![](/Users/likeke/Documents/笔记/WebGL/resources/5.jpg)
+  ![](./resources/5.jpg)
 
 ### WebGL图像处理
 
