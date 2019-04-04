@@ -4,19 +4,19 @@
 
 WebGL (Web图形库) 是一种JavaScript API，用于在任何兼容的Web浏览器中呈现交互式3D和2D图形，而无需使用插件。
 
-####兼容性
+### 兼容性
 
 目前支持 WebGL1 的浏览器有: Firefox 4+, Google Chrome9+, Opera 12+, Safari5.1+ 和 Internet Explorer11+。
 
 目前支持 WebGL2 的浏览器有: Firefox 51+, Google Chrome56+, Opera 43+。
 
-####开发语言
+### 开发语言
 
 JavaScript和GLSL(OpenGL着色语言)。
 
 WebGL的开发重点在于1.着色器的编写 2.矩阵变换。
 
-#### 基本的代码编写流程
+### 基本的代码编写流程
 
 1.获取webgl上下文环境
 
@@ -28,7 +28,7 @@ WebGL的开发重点在于1.着色器的编写 2.矩阵变换。
 
 5.开始绘制(可以单次或循环不断地执行4和5)
 
-#### 最简单的代码示例(绘制一个纯色的实心平面三角形)
+### 最简单的代码示例(绘制一个纯色的实心平面三角形)
 
 ```html
 <!DOCTYPE html>
@@ -184,9 +184,7 @@ WebGL的开发重点在于1.着色器的编写 2.矩阵变换。
 </html>
 ```
 
-
-
-#### 着色器
+### 着色器
 
 - 相关约定
 
@@ -206,7 +204,7 @@ WebGL的开发重点在于1.着色器的编写 2.矩阵变换。
 
   4.可变量（Varyings）。一种顶点着色器给片断着色器传值的方式。
 
-#### 矩阵变换
+### 矩阵变换
 
 - 旋转矩阵推导(由于平移矩阵需要做投影运算，因此二维变换需要3*3的矩阵)
 
@@ -580,36 +578,292 @@ WebGL的开发重点在于1.着色器的编写 2.矩阵变换。
   };
   ```
 
-####三维透视原理总结
+### 三维透视原理总结
 
 最简单的做法：
 
 将(x, y, z)变为(x/z, y/z, z)，z值越大物体越小，可以再乘一个系数作为调节。
 
-####相机变换原理总结
+### 相机变换原理总结
 
 若相机的变换矩阵为A，则先求出A的逆矩阵A^-1^ ，再将A^-1^ 应用与当前场景即可(A^-1^左乘vector4)。比如相机左移时，进行该操作后，对应的物体是右移，在视觉上给人的感觉依然是相机左移。
 
-#### 游戏光照系统原理总结
+### 游戏光照系统原理总结
 
 _注：任意形状的3D物体都可以由很多个平面三角形组合完成渲染，例如球形、立方体和不规则立体图形，因此计算物体表面某个点所在平面的法向量是比较容易的_ ，三角形任意两条边向量的叉乘即这个面的法向量 。
 
 - 平行光：
 
-  将三维物体的朝向(即平面法向量)和光的方向点乘得到一个数值a，再将a与该位置颜色值相乘。a的范围是-1到1，|a|越小位置颜色越暗。
+  将三维物体的朝向向量A(即平面法向量)和光的方向向量B(单位向量)点乘得到一个数值a，再将a与该位置颜色值相乘。a的范围是-1到1，|a|越小位置颜色越暗。同一个时刻，不同位置上接收到的光的方向向量是唯一的。
 
 - 点光源
 
-  …...
+  与平行光原理相同，只不过同一个时刻，不同位置上接收到的光的方向向量一般是不一样的。
+
+  ![](/Users/likeke/Documents/笔记/WebGL/resources/6.jpg)
 
 - 聚光灯
 
-  …...
+  与平行光原理相同，但是a变成了：将聚光灯中心位置的方向向量和照射在物体上的光的方向向量点乘得到数值。另外，需要选择一个限定范围， 然后判断光线是否在限定范围内，如果不在就不照亮。
 
-####WebGL图像处理
+  ![](/Users/likeke/Documents/笔记/WebGL/resources/5.jpg)
+
+### WebGL图像处理
+
+- 基本步骤：
+
+  1.在顶点着色器中添加一个属性a_texCoord，用来接收纹理坐标然后通过变量v_texCoord传给片断着色器。
+
+  ```html
+  <script id="2d-vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 a_texCoord;
+  ...
+  varying vec2 v_texCoord;
+   
+  void main() {
+     ...
+     // 将纹理坐标传给片断着色器
+     // GPU会在点之间进行插值
+     v_texCoord = a_texCoord;
+  }
+  </script>
+  ```
+
+  2.用片断着色器寻找纹理上对应的颜色
+
+  ```html
+  <script id="2d-fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+   
+  // 纹理
+  uniform sampler2D u_image;
+   
+  // 从顶点着色器传入的纹理坐标
+  varying vec2 v_texCoord;
+   
+  void main() {
+     // 在纹理上寻找对应颜色值
+     gl_FragColor = texture2D(u_image, v_texCoord);
+  }
+  </script>
+  ```
+
+  3.加载图像、将图像注入进纹理、开始绘制。
+
+  ```javascript
+  function main() {
+    var image = new Image();
+    image.src = "./img/demo.png";  // 必须在同一域名下
+    image.onload = function() {
+      render(image);
+    }
+  }
+   
+  function render(image) {
+    ...
+    // 之前的代码
+    ...
+    // 找到纹理的地址
+    var texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
+   
+    // 给矩形提供纹理坐标
+    var texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0.0,  0.0,
+        1.0,  0.0,
+        0.0,  1.0,
+        0.0,  1.0,
+        1.0,  0.0,
+        1.0,  1.0]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(texCoordLocation);
+    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+   
+    // 创建纹理
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+   
+    // 设置参数，让我们可以绘制任何尺寸的图像
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+   
+    // 将图像上传到纹理
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    ...
+  }
+  ```
+
+- 完整示例(将图片的r和g互换)：
+
+  _代码来自于<https://webglfundamentals.org/webgl/webgl-2d-image-red2blue.html>_
+
+  ```html
+  <canvas id="canvas"></canvas>
+  
+  <script id="2d-vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 a_position;
+  attribute vec2 a_texCoord;
+  
+  uniform vec2 u_resolution;
+  varying vec2 v_texCoord;
+  
+  void main() {
+     vec2 zeroToOne = a_position / u_resolution;
+     vec2 zeroToTwo = zeroToOne * 2.0;
+     vec2 clipSpace = zeroToTwo - 1.0;
+     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+     v_texCoord = a_texCoord;
+  }
+  </script>
+  <script id="2d-fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+  uniform sampler2D u_image;
+  varying vec2 v_texCoord;
+  void main() {
+     gl_FragColor = texture2D(u_image, v_texCoord).bgra;
+  }
+  </script>
+  <script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+  <script>
+  "use strict";
+  function main() {
+    var image = new Image();
+    image.src = "https://webglfundamentals.org/webgl/resources/leaves.jpg";  // MUST BE SAME DOMAIN!!!
+    image.onload = function() {
+      render(image);
+    };
+  }
+  
+  function render(image) {
+    // Get A WebGL context
+    /** @type {HTMLCanvasElement} */
+    var canvas = document.getElementById("canvas");
+    var gl = canvas.getContext("webgl");
+    if (!gl) {
+      return;
+    }
+  
+    // setup GLSL program
+    var program = webglUtils.createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
+  
+    // look up where the vertex data needs to go.
+    var positionLocation = gl.getAttribLocation(program, "a_position");
+    var texcoordLocation = gl.getAttribLocation(program, "a_texCoord");
+  
+    // Create a buffer to put three 2d clip space points in
+    var positionBuffer = gl.createBuffer();
+  
+    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Set a rectangle the same size as the image.
+    setRectangle(gl, 0, 0, image.width, image.height);
+  
+    // provide texture coordinates for the rectangle.
+    var texcoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0.0,  0.0,
+        1.0,  0.0,
+        0.0,  1.0,
+        0.0,  1.0,
+        1.0,  0.0,
+        1.0,  1.0,
+    ]), gl.STATIC_DRAW);
+  
+    // Create a texture.
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+  
+    // Set the parameters so we can render any size image.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  
+    // Upload the image into the texture.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  
+    // lookup uniforms
+    var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+  
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+  
+    // Tell WebGL how to convert from clip space to pixels
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  
+    // Clear the canvas
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  
+    // Tell it to use our program (pair of shaders)
+    gl.useProgram(program);
+  
+    // Turn on the position attribute
+    gl.enableVertexAttribArray(positionLocation);
+  
+    // Bind the position buffer.
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  
+    // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+    var size = 2;          // 2 components per iteration
+    var type = gl.FLOAT;   // the data is 32bit floats
+    var normalize = false; // don't normalize the data
+    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+    var offset = 0;        // start at the beginning of the buffer
+    gl.vertexAttribPointer(
+        positionLocation, size, type, normalize, stride, offset);
+  
+    // Turn on the teccord attribute
+    gl.enableVertexAttribArray(texcoordLocation);
+  
+    // Bind the position buffer.
+    gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+  
+    // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+    var size = 2;          // 2 components per iteration
+    var type = gl.FLOAT;   // the data is 32bit floats
+    var normalize = false; // don't normalize the data
+    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+    var offset = 0;        // start at the beginning of the buffer
+    gl.vertexAttribPointer(
+        texcoordLocation, size, type, normalize, stride, offset);
+  
+    // set the resolution
+    gl.uniform2f(resolutionLocation, gl.canvas.width, gl.canvas.height);
+  
+    // Draw the rectangle.
+    var primitiveType = gl.TRIANGLES;
+    var offset = 0;
+    var count = 6;
+    gl.drawArrays(primitiveType, offset, count);
+  }
+  
+  function setRectangle(gl, x, y, width, height) {
+    var x1 = x;
+    var x2 = x + width;
+    var y1 = y;
+    var y2 = y + height;
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+       x1, y1,
+       x2, y1,
+       x1, y2,
+       x1, y2,
+       x2, y1,
+       x2, y2,
+    ]), gl.STATIC_DRAW);
+  }
+  main();
+  </script>
+  ```
+
+  
+
+### 如何使用纹理
 
 …...
 
-####如何使用纹理
+### 天空盒
 
-…...
+……
